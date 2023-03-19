@@ -7,15 +7,14 @@ import os
 
 transform = transforms.Compose([
   transforms.Grayscale(num_output_channels=3),
-  transforms.Resize((244,244)),
-  transforms.ColorJitter(brightness=(0.2,1.5),contrast=(0.1,2.5),hue=.05, saturation=(.0,.15)),
-
+  transforms.Resize((502, 322)),
+  transforms.ColorJitter(brightness=(0.4,1.5),contrast=(0.3,2.5),hue=.05, saturation=(.0,.15)),
   # transforms.RandomAffine(0, translate=(0.0,0.0), scale=None, shear=(0.0,0.0), interpolation=PIL.Image.NEAREST, fill=(0,0,0)),
   transforms.RandomAffine(0, translate=(0.0,0.0), scale=None, shear=(0.0,0.0), fill=(0,0,0)),
   transforms.ToTensor()
 ])
 
-Images = torchvision.datasets.ImageFolder(root='./testImage', transform=transform)
+Images = torchvision.datasets.ImageFolder(root='./originalImage', transform=transform)
 
 # dataloader = torch.utils.data.DataLoader(Images, batch_size=4, shuffle=True)
 dataloader = torch.utils.data.DataLoader(Images, batch_size=4, shuffle=False)
@@ -28,8 +27,9 @@ if not os.path.exists(save_dir):
   os.makedirs(save_dir)
 
 
-for imgNum in range(5):
+for imgNum in range(7):
   # Iterate over the dataloader
+
   for i, data in enumerate(dataloader):
     print(len(data))
     # Get the images and labels from the batch
@@ -38,9 +38,9 @@ for imgNum in range(5):
 
     # Save the images to disk
     for j in range(images.size(0)):
-        image = images[j]
-        filename = f'{save_dir}/image_{i * 5 + j}_{imgNum}.jpg'
-        print(filename)
-        # print(j)
-        # print(type(image));
-        torchvision.utils.save_image(image, filename)
+      image = images[j]
+      filename = f'{save_dir}/card_{i * 4 + j}_{imgNum}.jpg'
+      print(filename)
+      # print(j)
+      # print(type(image));
+      torchvision.utils.save_image(image, filename)

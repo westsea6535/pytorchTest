@@ -9,19 +9,19 @@ import torchvision.transforms as transforms
 
 # Define the neural network
 class SiameseNetwork(nn.Module):
-    def __init__(self):
-        super(SiameseNetwork, self).__init__()
-        self.fc1 = nn.Linear(27648, 256)
-        self.fc2 = nn.Linear(256, 128)
-        self.fc3 = nn.Linear(128, 1)
+  def __init__(self):
+    super(SiameseNetwork, self).__init__()
+    self.fc1 = nn.Linear(27648, 256)
+    self.fc2 = nn.Linear(256, 128)
+    self.fc3 = nn.Linear(128, 1)
 
-    def forward(self, x1, x2):
-        x1 = F.relu(self.fc1(x1))
-        x2 = F.relu(self.fc1(x2))
-        x = torch.abs(x1 - x2)
-        x = F.relu(self.fc2(x))
-        x = self.fc3(x)
-        return x
+  def forward(self, x1, x2):
+    x1 = F.relu(self.fc1(x1))
+    x2 = F.relu(self.fc1(x2))
+    x = torch.abs(x1 - x2)
+    x = F.relu(self.fc2(x))
+    x = self.fc3(x)
+    return x
 
 
 transform = transforms.Compose([

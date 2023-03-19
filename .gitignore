@@ -1,0 +1,5 @@
+augmented_images/
+originalImage/
+testImage/
+trainImage/
+trained_model.pth

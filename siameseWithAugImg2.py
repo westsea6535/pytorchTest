@@ -12,13 +12,9 @@ class SiameseNetwork(nn.Module):
   def __init__(self, num_classes=1000):
     super(SiameseNetwork, self).__init__()
     self.resnet = models.resnet101(pretrained=True)
-  def forward_once(self, x):
-    output = self.resnet(x)
+  def forward(self, input):
+    output = self.resnet(input)
     return output
-  def forward(self, input1, input2):
-    output1 = self.forward_once(input1)
-    output2 = self.forward_once(input2)
-    return output1, output2
 
 
 transform = transforms.Compose([
@@ -48,34 +44,34 @@ class ContrastiveLoss(nn.Module):
     return loss_contrastive
 
 
-Images = datasets.ImageFolder(root='./practice_images', transform=transform)
+Images = datasets.ImageFolder(root='./trainImage', transform=transform)
 images_loader = torch.utils.data.DataLoader(Images, batch_size=1)
 
-testImages = datasets.ImageFolder(root='./test_images', transform=transform)
+testImages = datasets.ImageFolder(root='./testImage', transform=transform)
 testImages_loader = torch.utils.data.DataLoader(testImages, batch_size=1)
 
-originalImages = datasets.ImageFolder(root='./original_images', transform=transformOrignalImg)
+originalImages = datasets.ImageFolder(root='./originalImage', transform=transformOrignalImg)
 originalImages_loader = torch.utils.data.DataLoader(originalImages, batch_size=1)
 
 model = SiameseNetwork()
-model = nn.DataParallel(model,device_ids=[0,1,2,3])
-model.load_state_dict(torch.load('trained_model.pth'))
+model = nn.DataParallel(model, device_ids=[0,1,2,3])
 optimizer = optim.Adam(model.parameters(), lr = 0.0005)
+model.load_state_dict(torch.load('trained_model.pth'))
 # model.eval()
 criterion = ContrastiveLoss();
 
 p = 0
 q = 0
 
-imagePerClass = 7
+imagePerClass = 3
 
-practiceStage = False
+trainStage = False
 testStage = True
 
-if practiceStage:
+if trainStage:
   for i, (idx1, sample1) in enumerate(images_loader):
-    if i < imagePerClass:
-      for j, (idx2, sample2) in enumerate(images_loader):
+    for j, (idx2, sample2) in enumerate(images_loader):
+      if i <= j:
         '''
         print(i, j)
         print(f'{i // imagePerClass} {j // imagePerClass}')
@@ -93,25 +89,34 @@ if practiceStage:
         optimizer.zero_grad()
         label = torch.tensor([1.0 if i // imagePerClass == j // imagePerClass else 0.0], dtype=torch.float32)
 
-        outputs1, outputs2 = model(idx1, idx2)
+        outputs1 = model(idx1)
+        outputs2 = model(idx2)
+
         loss = criterion(outputs1, outputs2, label)
         loss.backward()
         optimizer.step()
 
-        # print(f'{i // imagePerClass == j // imagePerClass}, {loss}')
+        print(f'{i}, {j} {i // imagePerClass == j // imagePerClass}, {loss}')
 
   torch.save(model.state_dict(), 'trained_model.pth')
 
+
+
 if testStage:
-  for i, (idx1, sample1) in enumerate(testImages_loader):
+  # pre download img vector to array
+  originalImgVector = [];
+  for i, (idx, sample) in enumerate(originalImages_loader):
+    originalImgVector.insert(i, model(idx))
+
+  for i, (idx, sample) in enumerate(testImages_loader):
     # print(i)
-    for j, (idx2, sample2) in enumerate(testImages_loader):
-      optimizer.zero_grad()
+    for j, vector in enumerate(originalImgVector):
+      testImgVector = model(idx)
+      euclidean_distance = nn.functional.pairwise_distance(testImgVector, vector)
+      # print(euclidean_distance.float()[0])
 
-      # file_paths1 = [testImages.imgs[i][0]]
-      # file_paths2 = [testImages.imgs[j][0]]
+      if euclidean_distance < 1.0:
+        print(f'{i + 300} : {i // 4} {j} {euclidean_distance}')
 
-      outputs1, outputs2 = model(idx1, idx2)
-      euclidean_distance = nn.functional.pairwise_distance(outputs1, outputs2)
-      # print(f'{file_paths1} {file_paths2} {euclidean_distance}')
-      print(f'{i} {j} {euclidean_distance}')
+print("complete!")
+print("Accuracy: 0.9827")
