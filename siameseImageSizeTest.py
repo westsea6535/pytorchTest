@@ -7,6 +7,8 @@ import torchvision.transforms as transforms
 import torchvision.models as models
 import torch.optim as optim
 
+from time import time
+
 # print(torch.cuda.device_count())
 # Define the neural network
 class SiameseNetwork(nn.Module):
@@ -45,7 +47,7 @@ class ContrastiveLoss(nn.Module):
     return loss_contrastive
 
 
-Images = datasets.ImageFolder(root='./trainImage', transform=transform)
+Images = datasets.ImageFolder(root='./trainImage_3', transform=transform)
 images_loader = torch.utils.data.DataLoader(Images, batch_size=1)
 
 testImages = datasets.ImageFolder(root='./testImage', transform=transform)
@@ -57,72 +59,57 @@ originalImages_loader = torch.utils.data.DataLoader(originalImages, batch_size=1
 model = SiameseNetwork().cuda()
 model = nn.DataParallel(model, device_ids=[0])
 optimizer = optim.Adam(model.parameters(), lr = 0.0005)
-# model.load_state_dict(torch.load('trained_model.pth'))
+model.load_state_dict(torch.load('trained_model_3.pth'))
 # model.eval()
 criterion = ContrastiveLoss();
 
-p = 0
-q = 0
-
+trainingCount = 0
 imagePerClass = 3
 
-trainStage = True
-testStage = False
+trainStage = False
+testStage = True
 
 if trainStage:
-  for i, (idx1, sample1) in enumerate(images_loader):
-    for j, (idx2, sample2) in enumerate(images_loader):
-      if i <= j:
-        '''
-        print(i, j)
-        print(f'{i // imagePerClass} {j // imagePerClass}')
-        file_paths1 = [Images.imgs[i][0]]
-        file_paths2 = [Images.imgs[j][0]]
-        print(file_paths1)
-        print(file_paths2)
+  originalImgVector = [];
+  time_start = time()
+  for i, (idx_data, sample_data) in enumerate(images_loader):
+    for j, (idx_org, sample_org) in enumerate(originalImages_loader):
+      optimizer.zero_grad()
+      label = torch.tensor([1.0 if i // imagePerClass == j else 0.0], dtype=torch.float32).cuda()
 
-        print(sample1.size())
-        print(idx1) print(idx1.size())
-        print(inputs1.size())
-        print(inputs1)
-        '''
+      outputs1 = model(idx_org)
+      outputs2 = model(idx_data)
+      loss = criterion(outputs1, outputs2, label)
+      loss.backward()
+      optimizer.step()
 
-        optimizer.zero_grad()
-        label = torch.tensor([1.0 if i // imagePerClass == j // imagePerClass else 0.0], dtype=torch.float32).cuda()
-
-        outputs1 = model(idx1)
-        outputs2 = model(idx2)
-
-        loss = criterion(outputs1, outputs2, label)
-        loss.backward()
-        optimizer.step()
-
-        print(f'{i}, {j} {i // imagePerClass == j // imagePerClass}, {loss}')
+      print(f'{i}, {j} {i // imagePerClass == j}, {loss}')
+      trainingCount = trainingCount + 1
 
   torch.save(model.state_dict(), 'trained_model.pth')
+  print(f'{trainingCount} calcultated, {time() - time_start} spent)')
 
 
 
 if testStage:
   # pre download img vector to array
-  # originalImgVector = [];
-  # for i, (idx, sample) in enumerate(originalImages_loader):
-  #   originalImgVector.insert(i, model(idx))
-  #   print([originalImages.imgs[i][0]])
+  originalImgVector = [];
+  for i, (idx, sample) in enumerate(originalImages_loader):
+    originalImgVector.insert(i, model(idx))
+    # print([originalImages.imgs[i][0]])
 
+  for i, (idx, sample) in enumerate(testImages_loader):
+    for j, vector in enumerate(originalImgVector):
+      testImgVector = model(idx)
+      euclidean_distance = nn.functional.pairwise_distance(testImgVector, vector)
+      # print(f'{i} {j} {euclidean_distance}')
+
+      if euclidean_distance < 1.0:
+        print(f'{i} : {i // 6} {j} {[originalImages.imgs[j][0]]} {euclidean_distance}')
+        
   # for i, (idx, sample) in enumerate(testImages_loader):
-  #   # print(i)
-  #   for j, vector in enumerate(originalImgVector):
-  #     testImgVector = model(idx)
-  #     euclidean_distance = nn.functional.pairwise_distance(testImgVector, vector)
-  #     # print(f'{i} {j} {euclidean_distance}')
+  #   for j, (idx_org, sample_org) in enumerate(originalImages_loader):
+  #     euclidean_distance = nn.functional.pairwise_distance(model(idx), model(idx_org))
 
   #     if euclidean_distance < 0.5:
   #       print(f'{i} : {i // 4} {j} {[originalImages.imgs[j][0]]} {euclidean_distance}')
-        
-  for i, (idx, sample) in enumerate(testImages_loader):
-    for j, (idx_org, sample_org) in enumerate(originalImages_loader):
-      euclidean_distance = nn.functional.pairwise_distance(model(idx), model(idx_org))
-
-      if euclidean_distance < 0.5:
-        print(f'{i} : {i // 4} {j} {[originalImages.imgs[j][0]]} {euclidean_distance}')

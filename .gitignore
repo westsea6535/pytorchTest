@@ -3,3 +3,7 @@ originalImage/
 testImage/
 trainImage/
 trained_model.pth
+trainImage_1/
+trainImage_2/
+trainImage_3/
+*.pth
