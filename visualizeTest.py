@@ -4,16 +4,16 @@ import imutils
 from matplotlib import pyplot as plt
 
 # Load the image
-image = cv2.imread('./detectionTestImage/test2.jpg')
+image = cv2.imread('./detectionTestImage/test5.jpg')
 
 # Convert to grayscale
 gray_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
 
 # Apply bilateral filter to remove noise while preserving edges
-filtered_image = cv2.bilateralFilter(gray_image, 11, 17, 17)
+# filtered_image = cv2.bilateralFilter(gray_image, 11, 17, 17)
 
 # Apply Canny edge detection to detect edges
-edges = cv2.Canny(filtered_image, 100, 200)
+edges = cv2.Canny(image, 50, 150)
 
 # Apply binary thresholding to convert the edges to a binary image
 ret, binary_image = cv2.threshold(edges, 127, 255, cv2.THRESH_BINARY)
@@ -35,7 +35,7 @@ if onImage:
   plt.xticks([]), plt.yticks([])
   plt.subplot(2, 4, 2), plt.imshow(gray_image, cmap='gray'), plt.title('Grayscale')
   plt.xticks([]), plt.yticks([])
-  plt.subplot(2, 4, 3), plt.imshow(filtered_image, cmap='gray'), plt.title('bilateralFilter')
+  plt.subplot(2, 4, 3), plt.imshow(gray_image, cmap='gray'), plt.title('bilateralFilter')
   plt.xticks([]), plt.yticks([])
   plt.subplot(2, 4, 4), plt.imshow(edges, cmap='gray'), plt.title('Canny')
   plt.xticks([]), plt.yticks([])
@@ -57,7 +57,7 @@ else:
   screenCnt = None
 
   # Draw the contours on the original image
-  cv2.drawContours(image, sort, -1, (0, 255, 0), 3)
+  cv2.drawContours(image, edges, -1, (0, 255, 0), 1)
 
   # Display the image with contours
   cv2.imshow("Image with Contours", image)
